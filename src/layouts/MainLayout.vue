@@ -220,6 +220,7 @@
 // composition imports
 import { computed, onMounted, onBeforeUnmount, ref } from "vue";
 import { useQuasar } from "quasar";
+import { useRouter } from "vue-router";
 import { useStore } from "vuex";
 import { useDashboardStore } from "@/stores/dashboard";
 import { useAuthStore } from "@/stores/auth";
@@ -248,6 +249,7 @@ const {
 } = storeToRefs(useDashboardStore());
 
 const { displayName } = storeToRefs(useAuthStore());
+const router = useRouter();
 
 const darkMode = computed({
   get: () => {
@@ -288,13 +290,21 @@ function resetPassword() {
 function reset2FA() {
   $q.dialog({
     title: "Reset 2FA",
-    message: "Are you sure you would like to reset your 2FA token?",
+    message:
+      "Enter your current password to reset your 2FA token. You will be logged out and asked to set up 2FA again.",
+    prompt: {
+      model: "",
+      type: "password",
+      isValid: (val: string) => !!val,
+    },
     cancel: true,
     persistent: true,
-  }).onOk(async () => {
+  }).onOk(async (currentPassword: string) => {
     try {
-      const ret = await resetTwoFactor();
+      const ret = await resetTwoFactor(currentPassword);
       notifySuccess(ret, 3000);
+      await useAuthStore().logout();
+      router.push({ name: "Login" });
     } catch {}
   });
 }

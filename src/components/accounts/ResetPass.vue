@@ -2,6 +2,17 @@
   <q-dialog ref="dialogRef" @hide="onDialogHide">
     <q-card class="q-dialog-plugin" style="width: 60vw">
       <q-card-section class="row">
+        <div class="col-3">Current password:</div>
+        <div class="col-9">
+          <q-input
+            outlined
+            dense
+            v-model="currentPass"
+            :type="isPwd ? 'password' : 'text'"
+            autocomplete="current-password"
+            :rules="[(val) => !!val || '*Required']"
+          />
+        </div>
         <div class="col-3">New password:</div>
         <div class="col-9">
           <q-input
@@ -44,7 +55,7 @@
           color="primary"
           label="Reset"
           @click="onOKClick"
-          :disable="!pass || pass !== pass2"
+          :disable="!currentPass || !pass || pass !== pass2 || saving"
         />
         <q-btn color="negative" label="Cancel" @click="onDialogCancel" />
       </q-card-actions>
@@ -58,7 +69,9 @@ import { useDialogPluginComponent } from "quasar";
 import { resetPass } from "@/api/accounts";
 import { notifySuccess } from "@/utils/notify";
 
+const currentPass = ref("");
 const pass = ref("");
+const saving = ref(false);
 const pass2 = ref("");
 const isPwd = ref(true);
 
@@ -68,8 +81,15 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
 
 async function onOKClick() {
-  const ret = await resetPass(pass.value);
-  notifySuccess(ret);
-  onDialogOK();
+  saving.value = true;
+  try {
+    const ret = await resetPass(currentPass.value, pass.value);
+    notifySuccess(ret);
+    onDialogOK();
+  } catch {
+    // error already shown by the axios interceptor; keep the dialog open
+  } finally {
+    saving.value = false;
+  }
 }
 </script>
